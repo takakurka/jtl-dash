@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 
-const CSV_URL = 'https://github.com/takakurka/jtl-dash/raw/refs/heads/main/JTL_dashboard.csv';
+const CSV_URL = 'https://cdn.jsdelivr.net/gh/takakurka/jtl-dash@main/JTL_dashboard.csv';
 
 function Dashboard() {
   const [data, setData] = useState([]);

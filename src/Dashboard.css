@@ -1,56 +1,81 @@
 body {
-  font-family: Arial, sans-serif;
-  background-color: #f9f9f9;
+  font-family: 'Segoe UI', Tahoma, sans-serif;
+  background-color: #f5f7fa;
   margin: 0;
   padding: 2rem;
-  color: #333;
+  color: #222;
 }
 
 h1 {
   font-size: 2rem;
   font-weight: bold;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
 }
 
 input[type="text"] {
   font-size: 1rem;
-  padding: 0.5rem 1rem;
+  padding: 0.6rem 1rem;
   width: 100%;
   max-width: 600px;
   margin-bottom: 2rem;
   border: 1px solid #ccc;
-  border-radius: 4px;
+  border-radius: 6px;
+  box-shadow: 0 0 4px rgba(0,0,0,0.04);
 }
 
 .result-block {
   background-color: #fff;
   border: 1px solid #ddd;
-  padding: 1rem 1.5rem;
+  padding: 1.5rem;
   margin-bottom: 2rem;
-  border-radius: 6px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  transition: 0.2s ease-in-out;
+}
+
+.result-block:hover {
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
 }
 
 .sku-highlight {
   background-color: #d4f4dd;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 4px 8px;
+  border-radius: 5px;
   font-weight: bold;
+  display: inline-block;
+  margin-bottom: 0.3rem;
+  color: #135f25;
+}
+
+.result-block p {
+  margin: 0.4rem 0 1rem;
+  font-size: 1rem;
 }
 
 .attribute-table {
   border-collapse: collapse;
   width: 100%;
-  margin-top: 1rem;
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
 }
 
 .attribute-table th,
 .attribute-table td {
-  border: 1px solid #ccc;
-  padding: 0.5rem;
+  padding: 0.6rem 0.8rem;
   text-align: left;
 }
 
 .attribute-table th {
-  background-color: #f1f1f1;
+  background-color: #f0f0f0;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 2px solid #ccc;
+}
+
+.attribute-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.attribute-table tr:nth-child(odd) {
+  background-color: #ffffff;
 }

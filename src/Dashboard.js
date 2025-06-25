@@ -1,129 +1,116 @@
 import React, { useEffect, useState } from 'react';
 import Papa from 'papaparse';
 
-// Your CSV file URL
 const CSV_URL = 'https://cdn.jsdelivr.net/gh/takakurka/jtl-dash@main/JTL_dashboard.csv';
 
 export default function Dashboard() {
   const [data, setData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredRows, setFilteredRows] = useState([]);
-
-  // List of attributes to exclude
-  const excludedAttributes = [
-    'meta_', 'tags', 'template_suffix', 'barcode_type', 'active', 'product_type'
-  ];
+  const [filteredItems, setFilteredItems] = useState([]);
 
   useEffect(() => {
     Papa.parse(CSV_URL, {
       download: true,
       header: true,
-      encoding: 'UTF-8',
       complete: (result) => {
-        setData(result.data);
+        const cleanedData = result.data.map((row) => {
+          // Decode HTML entities like ü, ä, etc.
+          const decode = (str) => {
+            try {
+              return decodeURIComponent(escape(str));
+            } catch {
+              return str;
+            }
+          };
+
+          const newRow = {};
+          for (const key in row) {
+            newRow[key] = decode(row[key]);
+          }
+          return newRow;
+        });
+        setData(cleanedData);
       },
     });
   }, []);
 
   useEffect(() => {
     if (!searchTerm) {
-      setFilteredRows([]);
+      setFilteredItems([]);
       return;
     }
-
     const term = searchTerm.toLowerCase();
-    const matched = data.filter(
-      (row) =>
-        row.SKU?.toLowerCase().includes(term) ||
-        row['Item name']?.toLowerCase().includes(term)
+    const filtered = data.filter(
+      (item) =>
+        item.SKU?.toLowerCase().includes(term) ||
+        item['Item name']?.toLowerCase().includes(term)
     );
 
-    // Group by SKU
-    const grouped = matched.reduce((acc, row) => {
-      const sku = row.SKU;
-      if (!acc[sku]) {
-        acc[sku] = {
-          sku,
-          itemName: row['Item name'],
+    const grouped = {};
+    filtered.forEach((item) => {
+      const sku = item.SKU;
+      if (!grouped[sku]) {
+        grouped[sku] = {
+          sku: sku,
+          name: item['Item name'],
           attributes: [],
         };
       }
-
-      const attribute = row['Attribute name'];
-      const value = row['Attribute value'];
+      const attr = item['Attribute name'];
+      const val = item['Attribute value'];
 
       if (
-        attribute &&
-        !excludedAttributes.some((ex) => attribute.startsWith(ex))
+        attr &&
+        val &&
+        !attr.startsWith('meta_') &&
+        !['tags', 'template_suffix', 'barcode_type', 'active', 'product_type'].includes(attr)
       ) {
-        acc[sku].attributes.push({ attribute, value });
+        grouped[sku].attributes.push({ attr, val });
       }
+    });
 
-      return acc;
-    }, {});
-
-    setFilteredRows(Object.values(grouped));
+    setFilteredItems(Object.values(grouped));
   }, [searchTerm, data]);
 
   return (
-    <div style={{ padding: '3rem', fontFamily: 'Arial, sans-serif' }}>
-      <h1 style={{ fontSize: '2rem' }}>JTL Product Dashboard</h1>
-
+    <div style={{ padding: '2rem', fontFamily: 'Arial' }}>
+      <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>JTL Product Dashboard</h1>
       <input
         type="text"
-        placeholder="Search by SKU or Product Name..."
+        placeholder="Search by SKU or Item Name..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         style={{
-          fontSize: '1.2rem',
-          padding: '0.5rem 1rem',
+          fontSize: '1rem',
+          padding: '0.5rem',
           width: '100%',
-          maxWidth: '500px',
-          marginBottom: '2rem',
+          maxWidth: '600px',
+          margin: '1rem 0',
         }}
       />
 
-      {filteredRows.map((item, idx) => (
-        <div key={idx} style={{ marginBottom: '3rem' }}>
+      {filteredItems.map((item, idx) => (
+        <div key={idx} style={{ marginBottom: '2rem' }}>
           <p><strong>SKU:</strong> {item.sku}</p>
-          <p><strong>Name:</strong> {decodeURIComponent(escape(item.itemName || ''))}</p>
-          <table style={{ borderCollapse: 'collapse', width: '100%', marginTop: '1rem' }}>
+          <p><strong>Name:</strong> {item.name}</p>
+          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
             <thead>
               <tr>
-                <th style={styles.th}>Attribute</th>
-                <th style={styles.th}>Value</th>
+                <th style={{ border: '1px solid #ccc', padding: '0.5rem', textAlign: 'left' }}>Attribute</th>
+                <th style={{ border: '1px solid #ccc', padding: '0.5rem', textAlign: 'left' }}>Value</th>
               </tr>
             </thead>
             <tbody>
               {item.attributes.map((attr, i) => (
                 <tr key={i}>
-                  <td style={styles.td}>{attr.attribute}</td>
-                  <td style={styles.td}>{attr.value}</td>
+                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{attr.attr}</td>
+                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{attr.val}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       ))}
-
-      {searchTerm && filteredRows.length === 0 && (
-        <p>No product found for: <strong>{searchTerm}</strong></p>
-      )}
     </div>
   );
 }
-
-const styles = {
-  th: {
-    border: '1px solid #ccc',
-    padding: '8px',
-    backgroundColor: '#f8f8f8',
-    fontWeight: 'bold',
-    textAlign: 'left',
-  },
-  td: {
-    border: '1px solid #ccc',
-    padding: '8px',
-    verticalAlign: 'top',
-  },
-};

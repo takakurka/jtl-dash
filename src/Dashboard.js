@@ -1,6 +1,4 @@
-// src/Dashboard.js
 import React, { useState, useEffect } from "react";
-import "./App.css";
 
 const SHEETDB_URL = "https://sheetdb.io/api/v1/s3whprckk24jm";
 
@@ -15,7 +13,6 @@ function Dashboard() {
       .then((data) => {
         const rows = data.data || [];
 
-        // Ignorujemy wiersze z meta_ i pustymi "Attribute name"
         const clean = rows.filter(
           (row) =>
             row["Attribute name"] &&
@@ -23,7 +20,6 @@ function Dashboard() {
             row["SKU"]
         );
 
-        // Grupujemy po SKU
         const grouped = clean.reduce((acc, row) => {
           const sku = row["SKU"];
           if (!acc[sku]) {
@@ -55,10 +51,18 @@ function Dashboard() {
   );
 
   return (
-    <div style={{ padding: "4rem" }}>
+    <div style={{ padding: "4rem", fontFamily: "sans-serif" }}>
       <h1>JTL Produkt-Dashboard</h1>
       <input
-        style={{ fontSize: "1.5rem", padding: "0.5rem", width: "100%", maxWidth: "600px" }}
+        style={{
+          fontSize: "1.5rem",
+          padding: "0.5rem",
+          width: "100%",
+          maxWidth: "600px",
+          marginBottom: "2rem",
+          border: "1px solid #333",
+          borderRadius: "6px",
+        }}
         type="text"
         placeholder="Szukaj po SKU..."
         value={query}
@@ -68,7 +72,7 @@ function Dashboard() {
         <p>Ładowanie danych...</p>
       ) : (
         filtered.map((product) => (
-          <div key={product.sku} style={{ marginTop: "2rem" }}>
+          <div key={product.sku} style={{ marginBottom: "2rem" }}>
             <h2>{product.name} ({product.sku})</h2>
             <p><strong>GTIN:</strong> {product.gtin}</p>
             <ul>

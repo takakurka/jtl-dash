@@ -88,7 +88,7 @@ input[type="text"]:focus {
   background-color: #f9fafb;
 }
 
-.product-table tr:hover {
+.attribute-table tr:hover {
   background-color: #fffacd; /* pastel yellow */
   transition: background-color 0.2s ease-in-out;
 }

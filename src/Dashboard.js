@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Papa from 'papaparse';
-import './Dashboard.css';
-
+import './Dashboard.css'; // Upewnij się, że ten plik istnieje w tym samym folderze
 
 const CSV_URL = 'https://cdn.jsdelivr.net/gh/takakurka/jtl-dash@main/JTL_dashboard.csv';
 
@@ -16,7 +15,6 @@ export default function Dashboard() {
       header: true,
       complete: (result) => {
         const cleanedData = result.data.map((row) => {
-          // Decode HTML entities like ü, ä, etc.
           const decode = (str) => {
             try {
               return decodeURIComponent(escape(str));
@@ -24,7 +22,6 @@ export default function Dashboard() {
               return str;
             }
           };
-
           const newRow = {};
           for (const key in row) {
             newRow[key] = decode(row[key]);
@@ -41,6 +38,7 @@ export default function Dashboard() {
       setFilteredItems([]);
       return;
     }
+
     const term = searchTerm.toLowerCase();
     const filtered = data.filter(
       (item) =>
@@ -58,6 +56,7 @@ export default function Dashboard() {
           attributes: [],
         };
       }
+
       const attr = item['Attribute name'];
       const val = item['Attribute value'];
 
@@ -75,38 +74,32 @@ export default function Dashboard() {
   }, [searchTerm, data]);
 
   return (
-    <div style={{ padding: '2rem', fontFamily: 'Arial' }}>
-      <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>JTL Product Dashboard</h1>
+    <div className="dashboard-container">
+      <h1 className="dashboard-title">JTL Product Dashboard</h1>
       <input
         type="text"
         placeholder="Search by SKU or Item Name..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        style={{
-          fontSize: '1rem',
-          padding: '0.5rem',
-          width: '100%',
-          maxWidth: '600px',
-          margin: '1rem 0',
-        }}
+        className="dashboard-search"
       />
 
       {filteredItems.map((item, idx) => (
-        <div key={idx} style={{ marginBottom: '2rem' }}>
+        <div key={idx} className="dashboard-sku-block">
           <p><strong>SKU:</strong> {item.sku}</p>
           <p><strong>Name:</strong> {item.name}</p>
-          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+          <table className="dashboard-table">
             <thead>
               <tr>
-                <th style={{ border: '1px solid #ccc', padding: '0.5rem', textAlign: 'left' }}>Attribute</th>
-                <th style={{ border: '1px solid #ccc', padding: '0.5rem', textAlign: 'left' }}>Value</th>
+                <th>Attribute</th>
+                <th>Value</th>
               </tr>
             </thead>
             <tbody>
               {item.attributes.map((attr, i) => (
                 <tr key={i}>
-                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{attr.attr}</td>
-                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{attr.val}</td>
+                  <td>{attr.attr}</td>
+                  <td>{attr.val}</td>
                 </tr>
               ))}
             </tbody>

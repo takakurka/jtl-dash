@@ -1,6 +1,5 @@
-// src/App.js
+// src/Dashboard.js
 import React, { useState, useEffect } from "react";
-import "./App.css";
 
 const SHEETDB_URL = "https://sheetdb.io/api/v1/s3whprckk24jm";
 
@@ -14,6 +13,7 @@ function App() {
       .then((res) => res.json())
       .then((data) => {
         const rows = data?.data || [];
+
         const clean = rows.filter(
           (row) => !row["Attribute name"]?.startsWith("meta_")
         );
@@ -37,35 +37,49 @@ function App() {
 
         setProducts(grouped);
         setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Error loading data:", err);
+        setLoading(false);
       });
   }, []);
 
   const filtered = Object.values(products).filter((p) =>
-    p.sku.toLowerCase().includes(query.toLowerCase()) ||
-    p.name.toLowerCase().includes(query.toLowerCase())
+    p.sku.toLowerCase().includes(query.toLowerCase())
   );
 
   return (
-    <div className="App">
-      <h1>📦 JTL Dashboard</h1>
-      <input
-        type="text"
-        placeholder="Szukaj po SKU lub nazwie"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        className="search"
-      />
-
+    <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
+      <h1>JTL Produkt-Dashboard</h1>
       {loading ? (
-        <p>Ładowanie danych…</p>
-      ) : filtered.length === 0 ? (
-        <p>Brak wyników.</p>
+        <p>Ładowanie danych z Google Drive...</p>
       ) : (
-        <ul className="product-list">
+        <>
+          <input
+            type="text"
+            placeholder="Szukaj po SKU..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            style={{
+              padding: "0.5rem",
+              fontSize: "1rem",
+              marginBottom: "1rem",
+              width: "100%",
+              maxWidth: "400px",
+            }}
+          />
           {filtered.map((product) => (
-            <li key={product.sku} className="product-card">
-              <h2>{product.name}</h2>
-              <p><strong>SKU:</strong> {product.sku}</p>
+            <div
+              key={product.sku}
+              style={{
+                border: "1px solid #ddd",
+                marginBottom: "1rem",
+                padding: "1rem",
+                borderRadius: "8px",
+              }}
+            >
+              <h2>{product.sku}</h2>
+              <p><strong>Nazwa:</strong> {product.name}</p>
               <p><strong>GTIN:</strong> {product.gtin}</p>
               <ul>
                 {product.attributes.map((attr, i) => (
@@ -74,9 +88,9 @@ function App() {
                   </li>
                 ))}
               </ul>
-            </li>
+            </div>
           ))}
-        </ul>
+        </>
       )}
     </div>
   );

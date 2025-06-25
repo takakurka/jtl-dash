@@ -5,21 +5,29 @@ function Dashboard({ data }) {
   const [skuSearch, setSkuSearch] = useState('');
   const [attributeSearch, setAttributeSearch] = useState('');
 
-  const filteredBySKU = data.filter(item =>
-    item.SKU.toLowerCase().includes(skuSearch.toLowerCase()) ||
-    item.Name.toLowerCase().includes(skuSearch.toLowerCase())
+  const filteredBySKU = data.filter(
+    (item) =>
+      item.sku.toLowerCase().includes(skuSearch.toLowerCase()) ||
+      item.name.toLowerCase().includes(skuSearch.toLowerCase())
   );
 
-  const groupedAttributes = data.reduce((acc, item) => {
-    if (
-      item.Attribute.toLowerCase().includes(attributeSearch.toLowerCase())
-    ) {
-      if (!acc[item.SKU]) acc[item.SKU] = { name: item.Name, attributes: [] };
-      acc[item.SKU].attributes.push({
-        attribute: item.Attribute,
-        value: item.Value,
-      });
+  const filteredByAttribute = data.filter(
+    (item) =>
+      item.attribute &&
+      item.attribute.toLowerCase().includes(attributeSearch.toLowerCase())
+  );
+
+  const groupedAttributes = filteredByAttribute.reduce((acc, curr) => {
+    if (!acc[curr.sku]) {
+      acc[curr.sku] = {
+        sku: curr.sku,
+        attributes: [],
+      };
     }
+    acc[curr.sku].attributes.push({
+      attribute: curr.attribute,
+      value: curr.value,
+    });
     return acc;
   }, {});
 
@@ -31,50 +39,16 @@ function Dashboard({ data }) {
         type="text"
         placeholder="Search by SKU or Item Name..."
         value={skuSearch}
-        onChange={e => setSkuSearch(e.target.value)}
-        className="search-input"
+        onChange={(e) => setSkuSearch(e.target.value)}
       />
 
-      {skuSearch && filteredBySKU.map(item => (
-        <div key={item.SKU} className="product-card">
-          <div className="product-sku">SKU: <span>{item.SKU}</span></div>
-          <div className="product-name">Name: <strong>{item.Name}</strong></div>
-          <table>
-            <thead>
-              <tr>
-                <th>Attribute</th>
-                <th>Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              {item.Attributes.map((attr, index) => (
-                <tr key={index}>
-                  <td>{attr.Attribute}</td>
-                  <td>{attr.Value}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ))}
-
-      <h3>Search by Attribute</h3>
-      <input
-        type="text"
-        placeholder="e.g. color"
-        value={attributeSearch}
-        onChange={e => setAttributeSearch(e.target.value)}
-        className="search-input"
-      />
-
-      {attributeSearch && (
-        <div>
-          <p><strong>{Object.keys(groupedAttributes).length} SKU(s) found:</strong></p>
-          {Object.entries(groupedAttributes).map(([sku, data]) => (
-            <div key={sku} className="product-card">
-              <div className="product-sku">SKU: <span>{sku}</span></div>
-              <div className="product-name">Name: <strong>{data.name}</strong></div>
-              <table>
+      {skuSearch && (
+        <>
+          {filteredBySKU.map((item, index) => (
+            <div className="product-card" key={index}>
+              <div className="sku-label">SKU: <span>{item.sku}</span></div>
+              <div className="product-name"><strong>Name:</strong> {item.name}</div>
+              <table className="product-table">
                 <thead>
                   <tr>
                     <th>Attribute</th>
@@ -82,14 +56,42 @@ function Dashboard({ data }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.attributes.map((attr, index) => (
-                    <tr key={index}>
-                      <td>{attr.attribute}</td>
-                      <td>{attr.value}</td>
-                    </tr>
-                  ))}
+                  {item.attributes &&
+                    item.attributes.map((att, i) => (
+                      <tr key={i}>
+                        <td>{att.attribute}</td>
+                        <td>{att.value}</td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
+            </div>
+          ))}
+        </>
+      )}
+
+      <h3>Search by Attribute</h3>
+      <input
+        type="text"
+        placeholder="e.g. color, material, zipper..."
+        value={attributeSearch}
+        onChange={(e) => setAttributeSearch(e.target.value)}
+      />
+
+      {attributeSearch && (
+        <div className="attribute-results">
+          <p><strong>{filteredByAttribute.length} result(s) found:</strong></p>
+          {Object.entries(groupedAttributes).map(([sku, { attributes }]) => (
+            <div className="attribute-group" key={sku}>
+              <div className="sku-label">SKU: <span>{sku}</span></div>
+              <ul>
+                {attributes.map((att, idx) => (
+                  <li key={idx}>
+                    <strong>Attribute:</strong> {att.attribute} <br />
+                    <strong>Value:</strong> {att.value}
+                  </li>
+                ))}
+              </ul>
             </div>
           ))}
         </div>

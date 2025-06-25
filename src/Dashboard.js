@@ -6,112 +6,111 @@ const CSV_URL = 'https://cdn.jsdelivr.net/gh/takakurka/jtl-dash@main/JTL_dashboa
 export default function Dashboard() {
   const [data, setData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredItem, setFilteredItem] = useState(null);
+  const [filteredItems, setFilteredItems] = useState([]);
 
   useEffect(() => {
     Papa.parse(CSV_URL, {
       download: true,
       header: true,
-      skipEmptyLines: true,
       complete: (result) => {
-        const groupedData = {};
+        const cleanedData = result.data.map((row) => {
+          // Decode HTML entities like ü, ä, etc.
+          const decode = (str) => {
+            try {
+              return decodeURIComponent(escape(str));
+            } catch {
+              return str;
+            }
+          };
 
-        result.data.forEach((row) => {
-          const sku = row.SKU?.trim();
-          if (!sku) return;
-
-          if (!groupedData[sku]) {
-            groupedData[sku] = {
-              SKU: sku,
-              name: row['Item name'],
-              attributes: [],
-            };
+          const newRow = {};
+          for (const key in row) {
+            newRow[key] = decode(row[key]);
           }
-
-          const attrName = row['Attribute name']?.trim();
-          const attrValue = row['Attribute value']?.trim();
-          if (
-            attrName &&
-            attrValue &&
-            !attrName.startsWith('meta_') &&
-            !['tags', 'template_suffix', 'barcode_type', 'active', 'product_type'].includes(attrName)
-          ) {
-            groupedData[sku].attributes.push({
-              name: attrName,
-              value: attrValue,
-            });
-          }
+          return newRow;
         });
-
-        setData(Object.values(groupedData));
+        setData(cleanedData);
       },
     });
   }, []);
 
   useEffect(() => {
     if (!searchTerm) {
-      setFilteredItem(null);
+      setFilteredItems([]);
       return;
     }
-
     const term = searchTerm.toLowerCase();
-    const found = data.find(
+    const filtered = data.filter(
       (item) =>
         item.SKU?.toLowerCase().includes(term) ||
-        item.name?.toLowerCase().includes(term)
+        item['Item name']?.toLowerCase().includes(term)
     );
-    setFilteredItem(found || null);
+
+    const grouped = {};
+    filtered.forEach((item) => {
+      const sku = item.SKU;
+      if (!grouped[sku]) {
+        grouped[sku] = {
+          sku: sku,
+          name: item['Item name'],
+          attributes: [],
+        };
+      }
+      const attr = item['Attribute name'];
+      const val = item['Attribute value'];
+
+      if (
+        attr &&
+        val &&
+        !attr.startsWith('meta_') &&
+        !['tags', 'template_suffix', 'barcode_type', 'active', 'product_type'].includes(attr)
+      ) {
+        grouped[sku].attributes.push({ attr, val });
+      }
+    });
+
+    setFilteredItems(Object.values(grouped));
   }, [searchTerm, data]);
 
   return (
-    <div style={{ padding: '2rem', fontFamily: 'Arial, sans-serif', maxWidth: '1200px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>JTL Product Dashboard</h1>
-
+    <div style={{ padding: '2rem', fontFamily: 'Arial' }}>
+      <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>JTL Product Dashboard</h1>
       <input
         type="text"
-        placeholder="Search by SKU or product name..."
+        placeholder="Search by SKU or Item Name..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         style={{
           fontSize: '1rem',
-          padding: '0.75rem 1rem',
+          padding: '0.5rem',
           width: '100%',
           maxWidth: '600px',
-          marginBottom: '2rem',
-          borderRadius: '6px',
-          border: '1px solid #333',
+          margin: '1rem 0',
         }}
       />
 
-      {filteredItem ? (
-        <>
-          <p><strong>SKU:</strong> {filteredItem.SKU}</p>
-          <p><strong>Name:</strong> {filteredItem.name}</p>
-
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
-            <thead style={{ background: '#f3f3f3' }}>
+      {filteredItems.map((item, idx) => (
+        <div key={idx} style={{ marginBottom: '2rem' }}>
+          <p><strong>SKU:</strong> {item.sku}</p>
+          <p><strong>Name:</strong> {item.name}</p>
+          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+            <thead>
               <tr>
-                <th style={{ border: '1px solid #ddd', padding: '0.5rem', textAlign: 'left' }}>Attribute</th>
-                <th style={{ border: '1px solid #ddd', padding: '0.5rem', textAlign: 'left' }}>Value</th>
+                <th style={{ border: '1px solid #ccc', padding: '0.5rem', textAlign: 'left' }}>Attribute</th>
+                <th style={{ border: '1px solid #ccc', padding: '0.5rem', textAlign: 'left' }}>Value</th>
               </tr>
             </thead>
             <tbody>
-              {filteredItem.attributes.map((attr, index) => (
-                <tr key={index}>
-                  <td style={{ border: '1px solid #eee', padding: '0.5rem', verticalAlign: 'top', width: '40%' }}>
-                    {attr.name}
-                  </td>
-                  <td style={{ border: '1px solid #eee', padding: '0.5rem', verticalAlign: 'top' }}>
-                    {attr.value}
-                  </td>
+              {item.attributes.map((attr, i) => (
+                <tr key={i}>
+                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{attr.attr}</td>
+                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{attr.val}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </>
-      ) : searchTerm ? (
-        <p>No product found for: <strong>{searchTerm}</strong></p>
-      ) : null}
+        </div>
+      ))}
     </div>
   );
 }

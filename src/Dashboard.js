@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Papa from 'papaparse';
+import './Dashboard.css';
+
 
 const CSV_URL = 'https://cdn.jsdelivr.net/gh/takakurka/jtl-dash@main/JTL_dashboard.csv';
 

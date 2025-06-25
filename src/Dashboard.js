@@ -6,13 +6,13 @@ const CSV_URL = 'https://cdn.jsdelivr.net/gh/takakurka/jtl-dash@main/JTL_dashboa
 export default function Dashboard() {
   const [data, setData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredItems, setFilteredItems] = useState([]);
+  const [filteredItem, setFilteredItem] = useState(null);
 
   useEffect(() => {
     Papa.parse(CSV_URL, {
       download: true,
       header: true,
-      encoding: 'ISO-8859-1', // lepsze dla niemieckich znaków
+      encoding: 'UTF-8',
       complete: (result) => {
         setData(result.data);
       },
@@ -21,128 +21,85 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!searchTerm) {
-      setFilteredItems([]);
+      setFilteredItem(null);
       return;
     }
 
     const term = searchTerm.toLowerCase();
-    const matches = data.filter(
+    const found = data.find(
       (item) =>
         item.SKU?.toLowerCase().includes(term) ||
         item['Item name']?.toLowerCase().includes(term)
     );
-
-    const grouped = {};
-
-    matches.forEach((item) => {
-      const sku = item.SKU;
-      if (!grouped[sku]) {
-        grouped[sku] = {
-          sku: sku,
-          name: item['Item name'],
-          attributes: [],
-        };
-      }
-
-      const key = item.Attribute?.toLowerCase();
-      if (
-        key &&
-        !key.startsWith('meta_') &&
-        key !== 'tags' &&
-        key !== 'template_suffix' &&
-        key !== 'barcode_type' &&
-        key !== 'product_type' &&
-        key !== 'active'
-      ) {
-        grouped[sku].attributes.push({
-          name: item.Attribute,
-          value: item['Attribute value'],
-        });
-      }
-    });
-
-    setFilteredItems(Object.values(grouped));
+    setFilteredItem(found || null);
   }, [searchTerm, data]);
 
+  const attributes = filteredItem
+    ? data.filter(
+        (item) =>
+          item.SKU?.toLowerCase() === filteredItem.SKU?.toLowerCase() &&
+          item['Attribute'] &&
+          item['Attribute value'] &&
+          ![
+            'barcode_type',
+            'product_type',
+            'active',
+            'tags',
+            'template_suffix',
+          ].includes(item['Attribute']) &&
+          !item['Attribute'].startsWith('meta_')
+      )
+    : [];
+
   return (
-    <div style={styles.container}>
-      <h1 style={styles.header}>JTL Product Dashboard</h1>
+    <div style={{ maxWidth: '1000px', margin: '3rem auto', fontFamily: 'sans-serif' }}>
+      <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>JTL Product Dashboard</h1>
+
       <input
         type="text"
-        placeholder="Search by SKU or Product Name..."
+        placeholder="Szukaj po SKU lub nazwie produktu..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        style={styles.searchInput}
+        style={{
+          fontSize: '1rem',
+          padding: '0.5rem 1rem',
+          width: '100%',
+          maxWidth: '700px',
+          marginBottom: '2rem',
+          borderRadius: '6px',
+          border: '1px solid #444',
+        }}
       />
 
-      {filteredItems.length > 0 ? (
-        filteredItems.map((item) => (
-          <div key={item.sku} style={styles.resultBlock}>
-            <p><strong>SKU:</strong> {item.sku}</p>
-            <p><strong>Name:</strong> {item.name}</p>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>Attribute</th>
-                  <th style={styles.th}>Value</th>
+      {filteredItem && (
+        <>
+          <p><strong>SKU:</strong> {filteredItem.SKU}</p>
+          <p><strong>Name:</strong> {filteredItem['Item name']}</p>
+
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '2rem' }}>
+            <thead>
+              <tr style={{ background: '#f4f4f4' }}>
+                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '2px solid #ccc' }}>Attribute</th>
+                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '2px solid #ccc' }}>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              {attributes.map((attr, index) => (
+                <tr key={index}>
+                  <td style={{ padding: '8px', borderBottom: '1px solid #eee' }}>{attr['Attribute']}</td>
+                  <td style={{ padding: '8px', borderBottom: '1px solid #eee' }}>{attr['Attribute value']}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {item.attributes.map((attr, idx) => (
-                  <tr key={idx}>
-                    <td style={styles.td}>{attr.name}</td>
-                    <td style={styles.td}>{attr.value}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ))
-      ) : searchTerm ? (
-        <p>No product found for <strong>{searchTerm}</strong>.</p>
-      ) : null}
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+
+      {searchTerm && !filteredItem && (
+        <p style={{ marginTop: '2rem', color: '#888' }}>
+          Nie znaleziono produktu pasującego do: <strong>{searchTerm}</strong>
+        </p>
+      )}
     </div>
   );
 }
-
-const styles = {
-  container: {
-    fontFamily: 'system-ui, sans-serif',
-    padding: '2rem',
-    maxWidth: '1000px',
-    margin: '0 auto',
-  },
-  header: {
-    fontSize: '2rem',
-    marginBottom: '1.5rem',
-  },
-  searchInput: {
-    width: '100%',
-    padding: '1rem',
-    fontSize: '1rem',
-    borderRadius: '8px',
-    border: '1px solid #ccc',
-    marginBottom: '2rem',
-    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-  },
-  resultBlock: {
-    marginBottom: '3rem',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    marginTop: '1rem',
-    fontSize: '0.95rem',
-  },
-  th: {
-    backgroundColor: '#f5f5f5',
-    textAlign: 'left',
-    padding: '0.75rem',
-    borderBottom: '2px solid #ddd',
-  },
-  td: {
-    padding: '0.6rem 0.75rem',
-    borderBottom: '1px solid #eee',
-    verticalAlign: 'top',
-  },
-};

@@ -1,88 +1,84 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
+import Papa from 'papaparse';
 
-const SHEETDB_URL = "https://sheetdb.io/api/v1/s3whprckk24jm";
+const CSV_URL = 'https://github.com/takakurka/jtl-dash/raw/refs/heads/main/JTL_dashboard.csv';
 
 function Dashboard() {
-  const [products, setProducts] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
+  const [data, setData] = useState([]);
+  const [query, setQuery] = useState('');
+  const [filtered, setFiltered] = useState([]);
 
   useEffect(() => {
-    fetch(SHEETDB_URL)
-      .then((res) => res.json())
-      .then((data) => {
-        const rows = data?.data || [];
-
-        const clean = rows.filter(
-          (row) => !row["Attribute name"]?.toLowerCase().startsWith("meta_")
-        );
-
-        const grouped = clean.reduce((acc, row) => {
-          const sku = row["SKU"];
-          if (!acc[sku]) {
-            acc[sku] = {
-              sku,
-              name: row["Item name"],
-              gtin: row["GTIN"],
-              attributes: [],
-            };
-          }
-          acc[sku].attributes.push({
-            name: row["Attribute name"],
-            value: row["Attribute value"],
-          });
-          return acc;
-        }, {});
-
-        setProducts(grouped);
-        setLoading(false);
+    fetch(CSV_URL)
+      .then((res) => res.text())
+      .then((text) => {
+        Papa.parse(text, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => {
+            setData(results.data);
+          },
+        });
       });
   }, []);
 
-  const filteredProduct = Object.values(products).find((p) => {
-    const q = query.toLowerCase();
-    return (
-      p.sku?.toLowerCase().includes(q) ||
-      p.name?.toLowerCase().includes(q)
+  useEffect(() => {
+    const lowerQuery = query.toLowerCase();
+    const result = data.filter(
+      (item) =>
+        item.SKU?.toLowerCase().includes(lowerQuery) ||
+        item['Item Name']?.toLowerCase().includes(lowerQuery)
     );
-  });
+    setFiltered(result);
+  }, [query, data]);
 
   return (
-    <div style={{ padding: "2rem", fontFamily: "sans-serif" }}>
-      <h1>JTL Produkt-Dashboard</h1>
+    <div style={{ padding: '2rem', fontFamily: 'Arial, sans-serif' }}>
+      <h1 style={{ fontSize: '2rem' }}>JTL Produkt-Dashboard</h1>
       <input
         type="text"
-        placeholder="Wpisz SKU lub nazwę produktu"
+        placeholder="Szukaj po SKU lub nazwie..."
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         style={{
-          fontSize: "1.5rem",
-          padding: "0.5rem",
-          width: "100%",
-          maxWidth: "600px",
-          marginBottom: "2rem",
+          padding: '1rem',
+          fontSize: '1rem',
+          width: '100%',
+          maxWidth: '500px',
+          marginBottom: '1.5rem',
         }}
       />
-      {loading && <p>Ładowanie danych...</p>}
-      {!loading && query && !filteredProduct && (
-        <p>
-          Nie znaleziono produktu pasującego do: <strong>{query}</strong>
-        </p>
+
+      {query && filtered.length === 0 && (
+        <p>Nie znaleziono produktu pasującego do: <strong>{query}</strong></p>
       )}
-      {!loading && filteredProduct && (
-        <div>
-          <h2>{filteredProduct.name}</h2>
-          <p><strong>SKU:</strong> {filteredProduct.sku}</p>
-          <p><strong>GTIN:</strong> {filteredProduct.gtin}</p>
-          <h3>Atrybuty:</h3>
-          <ul>
-            {filteredProduct.attributes.map((attr, index) => (
-              <li key={index}>
-                <strong>{attr.name}:</strong> {attr.value}
-              </li>
+
+      {filtered.length > 0 && (
+        <table style={{ borderCollapse: 'collapse', width: '100%' }}>
+          <thead>
+            <tr>
+              {Object.keys(filtered[0]).map((key) => (
+                <th
+                  key={key}
+                  style={{ border: '1px solid #ccc', padding: '0.5rem', background: '#f9f9f9' }}
+                >
+                  {key}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((row, index) => (
+              <tr key={index}>
+                {Object.values(row).map((val, i) => (
+                  <td key={i} style={{ border: '1px solid #ddd', padding: '0.5rem' }}>
+                    {val}
+                  </td>
+                ))}
+              </tr>
             ))}
-          </ul>
-        </div>
+          </tbody>
+        </table>
       )}
     </div>
   );

@@ -1,103 +1,44 @@
-import React, { useEffect, useState } from 'react';
-import Papa from 'papaparse';
+import React, { useState, useEffect } from 'react';
 import './Dashboard.css';
 
-const CSV_URL = 'https://cdn.jsdelivr.net/gh/takakurka/jtl-dash@main/JTL_dashboard.csv';
-
-export default function Dashboard() {
-  const [data, setData] = useState([]);
+function Dashboard({ data }) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [attributeSearch, setAttributeSearch] = useState('');
-  const [filteredItems, setFilteredItems] = useState([]);
-  const [attributeResults, setAttributeResults] = useState([]);
+  const [attributeTerm, setAttributeTerm] = useState('');
 
-  useEffect(() => {
-    Papa.parse(CSV_URL, {
-      download: true,
-      header: true,
-      complete: (result) => {
-        const cleanedData = result.data.map((row) => {
-          const decode = (str) => {
-            try {
-              return decodeURIComponent(escape(str));
-            } catch {
-              return str;
-            }
-          };
+  const filteredBySKU = data.filter(
+    (item) =>
+      item.SKU.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.Name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-          const newRow = {};
-          for (const key in row) {
-            newRow[key] = decode(row[key]);
-          }
-          return newRow;
-        });
-        setData(cleanedData);
-      },
-    });
-  }, []);
-
-  useEffect(() => {
-    if (!searchTerm) {
-      setFilteredItems([]);
-      return;
-    }
-    const term = searchTerm.toLowerCase();
-    const filtered = data.filter(
-      (item) =>
-        item.SKU?.toLowerCase().includes(term) ||
-        item['Item name']?.toLowerCase().includes(term)
+  const attributeMatches = data
+    .flatMap((item) => {
+      return item.Attributes.map((attr) => ({
+        SKU: item.SKU,
+        Name: item.Name,
+        Attribute: attr.Attribute,
+        Value: attr.Value,
+      }));
+    })
+    .filter(
+      (entry) =>
+        entry.Attribute.toLowerCase().includes(attributeTerm.toLowerCase()) ||
+        entry.Value.toLowerCase().includes(attributeTerm.toLowerCase())
     );
 
-    const grouped = {};
-    filtered.forEach((item) => {
-      const sku = item.SKU;
-      if (sku?.endsWith('-0')) return;
-
-      if (!grouped[sku]) {
-        grouped[sku] = {
-          sku: sku,
-          name: item['Item name'],
-          attributes: [],
-        };
-      }
-
-      const attr = item['Attribute name'];
-      const val = item['Attribute value'];
-
-      if (
-        attr &&
-        val &&
-        !attr.startsWith('meta_') &&
-        !['tags', 'template_suffix', 'barcode_type', 'active', 'product_type'].includes(attr)
-      ) {
-        grouped[sku].attributes.push({ attr, val });
-      }
-    });
-
-    setFilteredItems(Object.values(grouped));
-  }, [searchTerm, data]);
-
-  useEffect(() => {
-    if (!attributeSearch) {
-      setAttributeResults([]);
-      return;
+  const groupedAttributes = attributeMatches.reduce((acc, item) => {
+    if (!acc[item.SKU]) {
+      acc[item.SKU] = {
+        Name: item.Name,
+        Attributes: [],
+      };
     }
-    const term = attributeSearch.toLowerCase();
-    const results = data.filter((item) => {
-      const attr = item['Attribute name']?.toLowerCase();
-      const val = item['Attribute value']?.toLowerCase();
-      return (
-        item.SKU &&
-        !item.SKU.endsWith('-0') &&
-        attr &&
-        val &&
-        !attr.startsWith('meta_') &&
-        !['tags', 'template_suffix', 'barcode_type', 'active', 'product_type'].includes(attr) &&
-        (attr.includes(term) || val.includes(term))
-      );
+    acc[item.SKU].Attributes.push({
+      Attribute: item.Attribute,
+      Value: item.Value,
     });
-    setAttributeResults(results);
-  }, [attributeSearch, data]);
+    return acc;
+  }, {});
 
   return (
     <div className="dashboard">
@@ -108,52 +49,74 @@ export default function Dashboard() {
         placeholder="Search by SKU or Item Name..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        className="search-bar"
+        className="search-input"
       />
 
-      {filteredItems.map((item, idx) => (
-        <div key={idx} className="product-card">
-          <p className="sku-label"><strong>SKU:</strong> <span className="sku-highlight">{item.sku}</span></p>
-          <p><strong>Name:</strong> {item.name}</p>
-          <table className="attribute-table">
-            <thead>
-              <tr>
-                <th>Attribute</th>
-                <th>Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              {item.attributes.map((attr, i) => (
-                <tr key={i}>
-                  <td>{attr.attr}</td>
-                  <td>{attr.val}</td>
+      {searchTerm &&
+        filteredBySKU.map((item) => (
+          <div key={item.SKU} className="product-card">
+            <div className="sku">SKU: <span>{item.SKU}</span></div>
+            <div className="name">Name: <strong>{item.Name}</strong></div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Attribute</th>
+                  <th>Value</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ))}
+              </thead>
+              <tbody>
+                {item.Attributes.map((attr, index) => (
+                  <tr key={index} className={index % 2 === 0 ? 'even' : 'odd'}>
+                    <td>{attr.Attribute}</td>
+                    <td>{attr.Value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
 
-      <h3>Search by Attribute</h3>
-      <input
-        type="text"
-        placeholder="Search by attribute..."
-        value={attributeSearch}
-        onChange={(e) => setAttributeSearch(e.target.value)}
-        className="search-bar"
-      />
-
-      {attributeSearch && (
-        <p><strong>{attributeResults.length} result(s) found:</strong></p>
-      )}
-
-      {attributeResults.map((item, index) => (
-        <div key={index} className="attribute-result">
-          <p><strong>SKU:</strong> <span className="sku-highlight">{item.SKU}</span></p>
-          <p><strong>Attribute:</strong> {item['Attribute name']}</p>
-          <p><strong>Value:</strong> {item['Attribute value']}</p>
-        </div>
-      ))}
+      <div className="attribute-search">
+        <h3>Search by Attribute</h3>
+        <input
+          type="text"
+          placeholder="e.g. color, memory foam, etc."
+          value={attributeTerm}
+          onChange={(e) => setAttributeTerm(e.target.value)}
+          className="search-input"
+        />
+        {attributeTerm && (
+          <div className="results">
+            <p>
+              {Object.keys(groupedAttributes).length} result(s) found:
+            </p>
+            {Object.entries(groupedAttributes).map(([sku, group]) => (
+              <div key={sku} className="product-card">
+                <div className="sku">SKU: <span>{sku}</span></div>
+                <div className="name">Name: <strong>{group.Name}</strong></div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Attribute</th>
+                      <th>Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {group.Attributes.map((attr, index) => (
+                      <tr key={index} className={index % 2 === 0 ? 'even' : 'odd'}>
+                        <td>{attr.Attribute}</td>
+                        <td>{attr.Value}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+
+export default Dashboard;

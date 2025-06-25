@@ -26,14 +26,12 @@ export default function Dashboard() {
 
     const term = searchTerm.toLowerCase();
 
-    // Filtrowanie pasujących rekordów po SKU lub nazwie
     const filtered = data.filter(
       (item) =>
         item.SKU?.toLowerCase().includes(term) ||
         item['Item name']?.toLowerCase().includes(term)
     );
 
-    // Grupowanie po SKU
     const grouped = {};
     filtered.forEach((item) => {
       const sku = item.SKU;
@@ -46,6 +44,8 @@ export default function Dashboard() {
       }
 
       const attrName = item['Attribute name']?.trim();
+      const value = item['Wert'] || item['Value'] || item['Wert '] || ''; // fallback
+
       const shouldIgnore =
         !attrName ||
         attrName.startsWith('meta_') ||
@@ -55,7 +55,7 @@ export default function Dashboard() {
       if (!shouldIgnore) {
         grouped[sku].attributes.push({
           name: attrName,
-          value: item['Wert'],
+          value: value,
         });
       }
     });
@@ -65,10 +65,12 @@ export default function Dashboard() {
 
   return (
     <div style={{ padding: '3rem' }}>
-      <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem' }}>JTL Produkt-Dashboard</h1>
+      <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+        JTL Product Dashboard
+      </h1>
       <input
         type="text"
-        placeholder="Szukaj po SKU lub nazwie produktu..."
+        placeholder="Search by SKU or product name..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         style={{
@@ -81,17 +83,17 @@ export default function Dashboard() {
       />
 
       {groupedItems.length === 0 && searchTerm ? (
-        <p>Nie znaleziono produktu pasującego do: <strong>{searchTerm}</strong></p>
+        <p>No product found for: <strong>{searchTerm}</strong></p>
       ) : (
         groupedItems.map((item) => (
           <div key={item.sku} style={{ marginBottom: '2rem', borderTop: '1px solid #ccc', paddingTop: '1rem' }}>
             <p><strong>SKU:</strong> {item.sku}</p>
-            <p><strong>Nazwa:</strong> {item.itemName}</p>
+            <p><strong>Name:</strong> {item.itemName}</p>
             <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
               <thead>
                 <tr>
-                  <th style={{ border: '1px solid #000', padding: '0.5rem', textAlign: 'left' }}>Atrybut</th>
-                  <th style={{ border: '1px solid #000', padding: '0.5rem', textAlign: 'left' }}>Wartość</th>
+                  <th style={{ border: '1px solid #000', padding: '0.5rem', textAlign: 'left' }}>Attribute</th>
+                  <th style={{ border: '1px solid #000', padding: '0.5rem', textAlign: 'left' }}>Value</th>
                 </tr>
               </thead>
               <tbody>

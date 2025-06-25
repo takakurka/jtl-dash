@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import Papa from "papaparse";
 
@@ -17,7 +16,11 @@ export default function Dashboard() {
       complete: (results) => {
         const grouped = results.data.reduce((acc, row) => {
           const sku = row["SKU"];
-          if (!sku) return acc;
+          const attributeName = row["Attribute name"] || "";
+
+          // Pomijamy meta_ dane
+          if (!sku || attributeName.toLowerCase().startsWith("meta_")) return acc;
+
           if (!acc[sku]) acc[sku] = [];
           acc[sku].push(row);
           return acc;

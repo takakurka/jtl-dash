@@ -7,7 +7,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   // direct download link to your Google Drive file
-  const csvUrl = "https://drive.google.com/uc?export=download&id=16w2WCY1Q5JmwxVMoGpiR9qS7S0Y7prTz";
+  const csvUrl = "https://docs.google.com/spreadsheets/d/1KACb4E2rioFx48TUyHKsR9Mk-6pR4liLq0e7Cydf3VQ/export?format=csv";
 
   useEffect(() => {
     fetch(csvUrl)

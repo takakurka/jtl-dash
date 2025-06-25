@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import Papa from 'papaparse';
-import './dashboard.css';
+import './Dashboard.css';
 
 const CSV_URL = 'https://cdn.jsdelivr.net/gh/takakurka/jtl-dash@main/JTL_dashboard.csv';
 
 export default function Dashboard() {
   const [data, setData] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [attributeSearch, setAttributeSearch] = useState('');
+  const [skuSearch, setSkuSearch] = useState('');
+  const [attrSearch, setAttrSearch] = useState('');
   const [filteredItems, setFilteredItems] = useState([]);
-  const [attributeResults, setAttributeResults] = useState([]);
+  const [attributeMatches, setAttributeMatches] = useState([]);
+
+  const IGNORED_ATTRIBUTES = ['tags', 'template_suffix', 'barcode_type', 'active', 'product_type'];
 
   useEffect(() => {
     Papa.parse(CSV_URL, {
@@ -36,11 +38,11 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    if (!searchTerm) {
+    if (!skuSearch) {
       setFilteredItems([]);
       return;
     }
-    const term = searchTerm.toLowerCase();
+    const term = skuSearch.toLowerCase();
     const filtered = data.filter(
       (item) =>
         item.SKU?.toLowerCase().includes(term) ||
@@ -66,61 +68,75 @@ export default function Dashboard() {
         attr &&
         val &&
         !attr.startsWith('meta_') &&
-        !['tags', 'template_suffix', 'barcode_type', 'active', 'product_type'].includes(attr)
+        !IGNORED_ATTRIBUTES.includes(attr)
       ) {
         grouped[sku].attributes.push({ attr, val });
       }
     });
 
     setFilteredItems(Object.values(grouped));
-  }, [searchTerm, data]);
+  }, [skuSearch, data]);
 
   useEffect(() => {
-    if (!attributeSearch) {
-      setAttributeResults([]);
+    if (!attrSearch) {
+      setAttributeMatches([]);
       return;
     }
-    const term = attributeSearch.toLowerCase();
-    const grouped = {};
-
-    data.forEach((item) => {
-      const sku = item.SKU;
+    const term = attrSearch.toLowerCase();
+    const filtered = data.filter((item) => {
       const attr = item['Attribute name'];
       const val = item['Attribute value'];
-
-      if (
+      const sku = item.SKU;
+      return (
         sku &&
         !sku.endsWith('-0') &&
         attr &&
         val &&
         !attr.startsWith('meta_') &&
-        !['tags', 'template_suffix', 'barcode_type', 'active', 'product_type'].includes(attr) &&
+        !IGNORED_ATTRIBUTES.includes(attr) &&
         (attr.toLowerCase().includes(term) || val.toLowerCase().includes(term))
-      ) {
-        if (!grouped[sku]) grouped[sku] = [];
-        grouped[sku].push({ attr, val });
-      }
+      );
     });
 
-    const resultArray = Object.entries(grouped).map(([sku, attributes]) => ({ sku, attributes }));
-    setAttributeResults(resultArray);
-  }, [attributeSearch, data]);
+    const grouped = {};
+    filtered.forEach((item) => {
+      const sku = item.SKU;
+      const attr = item['Attribute name'];
+      const val = item['Attribute value'];
+
+      if (!grouped[sku]) {
+        grouped[sku] = {
+          sku,
+          attributes: [],
+        };
+      }
+
+      grouped[sku].attributes.push({ attr, val });
+    });
+
+    setAttributeMatches(Object.values(grouped));
+  }, [attrSearch, data]);
 
   return (
-    <div className="dashboard">
+    <div className="dashboard-container">
       <h1>JTL Product Dashboard</h1>
+
       <input
         type="text"
         placeholder="Search by SKU or Item Name..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="search-bar"
+        value={skuSearch}
+        onChange={(e) => setSkuSearch(e.target.value)}
+        className="search-input"
       />
 
       {filteredItems.map((item, idx) => (
         <div key={idx} className="product-block">
-          <p><strong className="sku-label">SKU:</strong> {item.sku}</p>
-          <p><strong>Name:</strong> {item.name}</p>
+          <p>
+            <strong className="sku-highlight">SKU:</strong> {item.sku}
+          </p>
+          <p>
+            <strong>Name:</strong> {item.name}
+          </p>
           <table>
             <thead>
               <tr>
@@ -140,25 +156,31 @@ export default function Dashboard() {
         </div>
       ))}
 
-      <h2>Search by Attribute</h2>
+      <h3>Search by Attribute</h3>
       <input
         type="text"
-        placeholder="Search by Attribute..."
-        value={attributeSearch}
-        onChange={(e) => setAttributeSearch(e.target.value)}
-        className="search-bar"
+        placeholder="Search by attribute name or value..."
+        value={attrSearch}
+        onChange={(e) => setAttrSearch(e.target.value)}
+        className="search-input attribute-search"
       />
 
-      {attributeResults.length > 0 && (
-        <p><strong>{attributeResults.length} result(s) found:</strong></p>
+      {attributeMatches.length > 0 && (
+        <p style={{ marginTop: '0.5rem' }}>
+          {attributeMatches.length} result(s) found:
+        </p>
       )}
-
-      {attributeResults.map((item, idx) => (
-        <div key={idx} className="attribute-block">
-          <p><strong className="sku-label">SKU:</strong> {item.sku}</p>
+      {attributeMatches.map((item, idx) => (
+        <div key={idx} className="product-block">
+          <p>
+            <strong className="sku-highlight">SKU:</strong> {item.sku}
+          </p>
           <ul>
             {item.attributes.map((attr, i) => (
-              <li key={i}><strong>Attribute:</strong> {attr.attr}<br /><strong>Value:</strong> {attr.val}</li>
+              <li key={i}>
+                <strong>Attribute:</strong> {attr.attr} <br />
+                <strong>Value:</strong> {attr.val}
+              </li>
             ))}
           </ul>
         </div>

@@ -5,20 +5,10 @@ import './Dashboard.css';
 const CSV_URL =
   'https://cdn.jsdelivr.net/gh/takakurka/jtl-dash@main/JTL_dashboard.csv';
 
-const IGNORED_ATTRIBUTES = [
-  'tags',
-  'template_suffix',
-  'barcode_type',
-  'active',
-  'product_type',
-];
-
 export default function Dashboard() {
   const [data, setData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [attributeTerm, setAttributeTerm] = useState('');
   const [filteredItems, setFilteredItems] = useState([]);
-  const [attributeMatches, setAttributeMatches] = useState([]);
 
   useEffect(() => {
     Papa.parse(CSV_URL, {
@@ -71,11 +61,12 @@ export default function Dashboard() {
       }
       const attr = item['Attribute name'];
       const val = item['Attribute value'];
+
       if (
         attr &&
         val &&
         !attr.startsWith('meta_') &&
-        !IGNORED_ATTRIBUTES.includes(attr)
+        !['tags', 'template_suffix', 'barcode_type', 'active', 'product_type'].includes(attr)
       ) {
         grouped[sku].attributes.push({ attr, val });
       }
@@ -83,41 +74,6 @@ export default function Dashboard() {
 
     setFilteredItems(Object.values(grouped));
   }, [searchTerm, data]);
-
-  useEffect(() => {
-    if (!attributeTerm) {
-      setAttributeMatches([]);
-      return;
-    }
-    const term = attributeTerm.toLowerCase();
-    const matches = data.filter((item) => {
-      const attr = item['Attribute name'];
-      const val = item['Attribute value'];
-      const sku = item.SKU;
-      return (
-        sku &&
-        !sku.endsWith('-0') &&
-        attr &&
-        val &&
-        !attr.startsWith('meta_') &&
-        !IGNORED_ATTRIBUTES.includes(attr) &&
-        (attr.toLowerCase().includes(term) || val.toLowerCase().includes(term))
-      );
-    });
-
-    const grouped = {};
-    matches.forEach((item) => {
-      const sku = item.SKU;
-      if (!grouped[sku]) {
-        grouped[sku] = [];
-      }
-      grouped[sku].push({
-        attr: item['Attribute name'],
-        val: item['Attribute value'],
-      });
-    });
-    setAttributeMatches(grouped);
-  }, [attributeTerm, data]);
 
   return (
     <div className="dashboard-container">
@@ -131,14 +87,14 @@ export default function Dashboard() {
       />
 
       {filteredItems.map((item, idx) => (
-        <div key={idx} className="product-block">
+        <div key={idx} className="product-card">
           <p>
             <strong className="sku-highlight">SKU:</strong> {item.sku}
           </p>
           <p>
             <strong>Name:</strong> {item.name}
           </p>
-          <table>
+          <table className="product-table">
             <thead>
               <tr>
                 <th>Attribute</th>
@@ -147,7 +103,7 @@ export default function Dashboard() {
             </thead>
             <tbody>
               {item.attributes.map((attr, i) => (
-                <tr key={i}>
+                <tr key={i} className={i % 2 === 0 ? 'even-row' : 'odd-row'}>
                   <td>{attr.attr}</td>
                   <td>{attr.val}</td>
                 </tr>
@@ -156,38 +112,6 @@ export default function Dashboard() {
           </table>
         </div>
       ))}
-
-      <div className="attribute-search">
-        <h3>Search by Attribute</h3>
-        <input
-          type="text"
-          placeholder="e.g. FBA, color, zipper..."
-          value={attributeTerm}
-          onChange={(e) => setAttributeTerm(e.target.value)}
-          className="search-bar"
-        />
-
-        {Object.keys(attributeMatches).length > 0 && (
-          <div className="search-results">
-            <p><strong>{Object.keys(attributeMatches).length} result(s) found:</strong></p>
-            {Object.entries(attributeMatches).map(([sku, attrs], idx) => (
-              <div key={idx} className="product-block">
-                <p>
-                  <strong className="sku-highlight">SKU:</strong> {sku}
-                </p>
-                <ul>
-                  {attrs.map((pair, i) => (
-                    <li key={i}>
-                      <strong>Attribute:</strong> {pair.attr}<br />
-                      <strong>Value:</strong> {pair.val}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

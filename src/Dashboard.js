@@ -12,24 +12,9 @@ export default function Dashboard() {
     Papa.parse(CSV_URL, {
       download: true,
       header: true,
+      encoding: 'ISO-8859-1', // lepsze dla niemieckich znaków
       complete: (result) => {
-        const cleanedData = result.data.map((row) => {
-          // Decode HTML entities like ü, ä, etc.
-          const decode = (str) => {
-            try {
-              return decodeURIComponent(escape(str));
-            } catch {
-              return str;
-            }
-          };
-
-          const newRow = {};
-          for (const key in row) {
-            newRow[key] = decode(row[key]);
-          }
-          return newRow;
-        });
-        setData(cleanedData);
+        setData(result.data);
       },
     });
   }, []);
@@ -39,15 +24,17 @@ export default function Dashboard() {
       setFilteredItems([]);
       return;
     }
+
     const term = searchTerm.toLowerCase();
-    const filtered = data.filter(
+    const matches = data.filter(
       (item) =>
         item.SKU?.toLowerCase().includes(term) ||
         item['Item name']?.toLowerCase().includes(term)
     );
 
     const grouped = {};
-    filtered.forEach((item) => {
+
+    matches.forEach((item) => {
       const sku = item.SKU;
       if (!grouped[sku]) {
         grouped[sku] = {
@@ -56,16 +43,21 @@ export default function Dashboard() {
           attributes: [],
         };
       }
-      const attr = item['Attribute name'];
-      const val = item['Attribute value'];
 
+      const key = item.Attribute?.toLowerCase();
       if (
-        attr &&
-        val &&
-        !attr.startsWith('meta_') &&
-        !['tags', 'template_suffix', 'barcode_type', 'active', 'product_type'].includes(attr)
+        key &&
+        !key.startsWith('meta_') &&
+        key !== 'tags' &&
+        key !== 'template_suffix' &&
+        key !== 'barcode_type' &&
+        key !== 'product_type' &&
+        key !== 'active'
       ) {
-        grouped[sku].attributes.push({ attr, val });
+        grouped[sku].attributes.push({
+          name: item.Attribute,
+          value: item['Attribute value'],
+        });
       }
     });
 
@@ -73,44 +65,84 @@ export default function Dashboard() {
   }, [searchTerm, data]);
 
   return (
-    <div style={{ padding: '2rem', fontFamily: 'Arial' }}>
-      <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>JTL Product Dashboard</h1>
+    <div style={styles.container}>
+      <h1 style={styles.header}>JTL Product Dashboard</h1>
       <input
         type="text"
-        placeholder="Search by SKU or Item Name..."
+        placeholder="Search by SKU or Product Name..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        style={{
-          fontSize: '1rem',
-          padding: '0.5rem',
-          width: '100%',
-          maxWidth: '600px',
-          margin: '1rem 0',
-        }}
+        style={styles.searchInput}
       />
 
-      {filteredItems.map((item, idx) => (
-        <div key={idx} style={{ marginBottom: '2rem' }}>
-          <p><strong>SKU:</strong> {item.sku}</p>
-          <p><strong>Name:</strong> {item.name}</p>
-          <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-            <thead>
-              <tr>
-                <th style={{ border: '1px solid #ccc', padding: '0.5rem', textAlign: 'left' }}>Attribute</th>
-                <th style={{ border: '1px solid #ccc', padding: '0.5rem', textAlign: 'left' }}>Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              {item.attributes.map((attr, i) => (
-                <tr key={i}>
-                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{attr.attr}</td>
-                  <td style={{ border: '1px solid #ccc', padding: '0.5rem' }}>{attr.val}</td>
+      {filteredItems.length > 0 ? (
+        filteredItems.map((item) => (
+          <div key={item.sku} style={styles.resultBlock}>
+            <p><strong>SKU:</strong> {item.sku}</p>
+            <p><strong>Name:</strong> {item.name}</p>
+            <table style={styles.table}>
+              <thead>
+                <tr>
+                  <th style={styles.th}>Attribute</th>
+                  <th style={styles.th}>Value</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ))}
+              </thead>
+              <tbody>
+                {item.attributes.map((attr, idx) => (
+                  <tr key={idx}>
+                    <td style={styles.td}>{attr.name}</td>
+                    <td style={styles.td}>{attr.value}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))
+      ) : searchTerm ? (
+        <p>No product found for <strong>{searchTerm}</strong>.</p>
+      ) : null}
     </div>
   );
 }
+
+const styles = {
+  container: {
+    fontFamily: 'system-ui, sans-serif',
+    padding: '2rem',
+    maxWidth: '1000px',
+    margin: '0 auto',
+  },
+  header: {
+    fontSize: '2rem',
+    marginBottom: '1.5rem',
+  },
+  searchInput: {
+    width: '100%',
+    padding: '1rem',
+    fontSize: '1rem',
+    borderRadius: '8px',
+    border: '1px solid #ccc',
+    marginBottom: '2rem',
+    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+  },
+  resultBlock: {
+    marginBottom: '3rem',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    marginTop: '1rem',
+    fontSize: '0.95rem',
+  },
+  th: {
+    backgroundColor: '#f5f5f5',
+    textAlign: 'left',
+    padding: '0.75rem',
+    borderBottom: '2px solid #ddd',
+  },
+  td: {
+    padding: '0.6rem 0.75rem',
+    borderBottom: '1px solid #eee',
+    verticalAlign: 'top',
+  },
+};

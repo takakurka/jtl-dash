@@ -11,6 +11,8 @@ export default function Dashboard() {
   const [filteredItems, setFilteredItems] = useState([]);
   const [attributeMatches, setAttributeMatches] = useState([]);
 
+  const ignoredAttributes = ['tags', 'template_suffix', 'barcode_type', 'active', 'product_type'];
+
   useEffect(() => {
     Papa.parse(CSV_URL, {
       download: true,
@@ -35,7 +37,7 @@ export default function Dashboard() {
     });
   }, []);
 
-  // Search by SKU or Item Name
+  // Main search bar
   useEffect(() => {
     if (!searchTerm) {
       setFilteredItems([]);
@@ -69,7 +71,7 @@ export default function Dashboard() {
         attr &&
         val &&
         !attr.startsWith('meta_') &&
-        !['tags', 'template_suffix', 'barcode_type', 'active', 'product_type'].includes(attr)
+        !ignoredAttributes.includes(attr)
       ) {
         grouped[sku].attributes.push({ attr, val });
       }
@@ -78,7 +80,7 @@ export default function Dashboard() {
     setFilteredItems(Object.values(grouped));
   }, [searchTerm, data]);
 
-  // Search by Attribute name/value
+  // Attribute search bar
   useEffect(() => {
     if (!attributeSearchTerm) {
       setAttributeMatches([]);
@@ -89,12 +91,17 @@ export default function Dashboard() {
 
     const matches = data
       .filter((item) => {
+        const sku = item.SKU;
         const attr = item['Attribute name']?.toLowerCase() || '';
         const val = item['Attribute value']?.toLowerCase() || '';
         return (
-          (attr.includes(term) || val.includes(term)) &&
-          item.SKU &&
-          !item.SKU.endsWith('-0')
+          sku &&
+          !sku.endsWith('-0') &&
+          attr &&
+          val &&
+          !attr.startsWith('meta_') &&
+          !ignoredAttributes.includes(attr) &&
+          (attr.includes(term) || val.includes(term))
         );
       })
       .map((item) => ({
@@ -110,7 +117,7 @@ export default function Dashboard() {
     <div className="dashboard-container">
       <h1 className="dashboard-title">JTL Product Dashboard</h1>
 
-      {/* Original Search Bar */}
+      {/* Main Search */}
       <input
         type="text"
         placeholder="Search by SKU or Item Name..."
@@ -142,7 +149,7 @@ export default function Dashboard() {
         </div>
       ))}
 
-      {/* NEW: Attribute Search */}
+      {/* Attribute Search */}
       <h2 className="dashboard-subtitle">Search by Attribute</h2>
       <input
         type="text"

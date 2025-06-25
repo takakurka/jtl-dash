@@ -46,29 +46,33 @@ export default function Dashboard() {
         item['Item name']?.toLowerCase().includes(term)
     );
 
-    const grouped = {};
-    filtered.forEach((item) => {
-      const sku = item.SKU;
-      if (!grouped[sku]) {
-        grouped[sku] = {
-          sku: sku,
-          name: item['Item name'],
-          attributes: [],
-        };
-      }
+const grouped = {};
+filtered.forEach((item) => {
+  const sku = item.SKU;
 
-      const attr = item['Attribute name'];
-      const val = item['Attribute value'];
+  if (!sku || sku.endsWith('-0')) return;
 
-      if (
-        attr &&
-        val &&
-        !attr.startsWith('meta_') &&
-        !['tags', 'template_suffix', 'barcode_type', 'active', 'product_type'].includes(attr)
-      ) {
-        grouped[sku].attributes.push({ attr, val });
-      }
-    });
+  if (!grouped[sku]) {
+    grouped[sku] = {
+      sku: sku,
+      name: item['Item name'],
+      attributes: [],
+    };
+  }
+
+  const attr = item['Attribute name'];
+  const val = item['Attribute value'];
+
+  if (
+    attr &&
+    val &&
+    !attr.startsWith('meta_') &&
+    !['tags', 'template_suffix', 'barcode_type', 'active', 'product_type'].includes(attr)
+  ) {
+    grouped[sku].attributes.push({ attr, val });
+  }
+});
+
 
     setFilteredItems(Object.values(grouped));
   }, [searchTerm, data]);

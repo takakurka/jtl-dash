@@ -7,7 +7,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   // direct download link to your Google Drive file
-  const csvUrl = "https://docs.google.com/spreadsheets/d/1KACb4E2rioFx48TUyHKsR9Mk-6pR4liLq0e7Cydf3VQ/export?format=csv";
+  const csvUrl = "https://github.com/takakurka/jtl-dash/raw/refs/heads/main/jtl_test.csv";
 
   useEffect(() => {
     fetch(csvUrl)

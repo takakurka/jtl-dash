@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import "./App.css";
 
 const SHEETDB_URL = "https://sheetdb.io/api/v1/s3whprckk24jm";
 
@@ -12,32 +11,25 @@ function App() {
     fetch(SHEETDB_URL)
       .then((res) => res.json())
       .then((data) => {
-        const rows = data?.data || [];
+        const rows = data.data || [];
 
         const clean = rows.filter(
-          (row) => !row["Attribute name"]?.startsWith("meta_")
+          (row) => row["Attribute name"] && !row["Attribute name"].startsWith("meta_")
         );
 
         const grouped = clean.reduce((acc, row) => {
           const sku = row["SKU"];
-          if (!sku) return acc;
-
-          const lowerSku = sku.toLowerCase();
-
-          if (!acc[lowerSku]) {
-            acc[lowerSku] = {
-              sku: lowerSku,
+          if (!acc[sku]) {
+            acc[sku] = {
               name: row["Item name"],
               gtin: row["GTIN"],
               attributes: [],
             };
           }
-
-          acc[lowerSku].attributes.push({
+          acc[sku].attributes.push({
             name: row["Attribute name"],
             value: row["Attribute value"],
           });
-
           return acc;
         }, {});
 
@@ -50,51 +42,47 @@ function App() {
       });
   }, []);
 
-  const filtered = Object.values(products).filter((product) =>
-    product.sku.toLowerCase().includes(query.toLowerCase()) ||
-    product.name?.toLowerCase().includes(query.toLowerCase())
-  );
+  const product = products[query.trim()] || null;
 
   return (
-    <div style={{ padding: "3rem" }}>
+    <div style={{ padding: "3rem", fontFamily: "sans-serif" }}>
       <h1>JTL Produkt-Dashboard</h1>
       <input
+        style={{
+          padding: "1rem",
+          fontSize: "1.2rem",
+          width: "100%",
+          maxWidth: "600px",
+          marginBottom: "2rem",
+          border: "2px solid #333",
+          borderRadius: "5px",
+        }}
         type="text"
-        placeholder="Szukaj po SKU lub nazwie..."
+        placeholder="Wpisz SKU, np. bed006"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        style={{ fontSize: "1.5rem", padding: "0.5rem", width: "600px" }}
       />
-      {loading && <p>Ładowanie danych z Google Drive...</p>}
 
-      {!loading && filtered.length === 0 && <p>Brak wyników</p>}
+      {loading && <p>Ładowanie danych...</p>}
 
-      {filtered.map((product) => (
-        <div
-          key={product.sku}
-          style={{
-            marginTop: "2rem",
-            padding: "1rem",
-            border: "1px solid #ccc",
-            borderRadius: "8px",
-          }}
-        >
+      {!loading && query && !product && (
+        <p>Nie znaleziono produktu o SKU: <strong>{query}</strong></p>
+      )}
+
+      {product && (
+        <div style={{ marginTop: "2rem" }}>
           <h2>{product.name}</h2>
-          <p>
-            <strong>SKU:</strong> {product.sku}
-          </p>
-          <p>
-            <strong>GTIN:</strong> {product.gtin}
-          </p>
+          <p><strong>GTIN:</strong> {product.gtin}</p>
+          <h3>Atrybuty:</h3>
           <ul>
-            {product.attributes.map((attr, index) => (
-              <li key={index}>
+            {product.attributes.map((attr, i) => (
+              <li key={i}>
                 <strong>{attr.name}:</strong> {attr.value}
               </li>
             ))}
           </ul>
         </div>
-      ))}
+      )}
     </div>
   );
 }

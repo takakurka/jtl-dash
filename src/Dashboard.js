@@ -1,17 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import Papa from 'papaparse';
-import './Dashboard.css';
+import './dashboard.css';
 
 const CSV_URL = 'https://cdn.jsdelivr.net/gh/takakurka/jtl-dash@main/JTL_dashboard.csv';
+
+const IGNORED_ATTRIBUTES = [
+  'tags',
+  'template_suffix',
+  'barcode_type',
+  'active',
+  'product_type',
+];
 
 export default function Dashboard() {
   const [data, setData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [attributeSearchTerm, setAttributeSearchTerm] = useState('');
   const [filteredItems, setFilteredItems] = useState([]);
-  const [attributeMatches, setAttributeMatches] = useState([]);
-
-  const ignoredAttributes = ['tags', 'template_suffix', 'barcode_type', 'active', 'product_type'];
+  const [attributeSearchTerm, setAttributeSearchTerm] = useState('');
+  const [attributeFiltered, setAttributeFiltered] = useState([]);
 
   useEffect(() => {
     Papa.parse(CSV_URL, {
@@ -37,13 +43,11 @@ export default function Dashboard() {
     });
   }, []);
 
-  // Main search bar
   useEffect(() => {
     if (!searchTerm) {
       setFilteredItems([]);
       return;
     }
-
     const term = searchTerm.toLowerCase();
     const filtered = data.filter(
       (item) =>
@@ -55,7 +59,6 @@ export default function Dashboard() {
     filtered.forEach((item) => {
       const sku = item.SKU;
       if (!sku || sku.endsWith('-0')) return;
-
       if (!grouped[sku]) {
         grouped[sku] = {
           sku: sku,
@@ -63,16 +66,9 @@ export default function Dashboard() {
           attributes: [],
         };
       }
-
       const attr = item['Attribute name'];
       const val = item['Attribute value'];
-
-      if (
-        attr &&
-        val &&
-        !attr.startsWith('meta_') &&
-        !ignoredAttributes.includes(attr)
-      ) {
+      if (attr && val && !attr.startsWith('meta_') && !IGNORED_ATTRIBUTES.includes(attr)) {
         grouped[sku].attributes.push({ attr, val });
       }
     });
@@ -80,57 +76,56 @@ export default function Dashboard() {
     setFilteredItems(Object.values(grouped));
   }, [searchTerm, data]);
 
-  // Attribute search bar
   useEffect(() => {
     if (!attributeSearchTerm) {
-      setAttributeMatches([]);
+      setAttributeFiltered([]);
       return;
     }
-
     const term = attributeSearchTerm.toLowerCase();
+    const grouped = {};
+    data.forEach((item) => {
+      const attr = item['Attribute name'];
+      const val = item['Attribute value'];
+      const sku = item.SKU;
 
-    const matches = data
-      .filter((item) => {
-        const sku = item.SKU;
-        const attr = item['Attribute name']?.toLowerCase() || '';
-        const val = item['Attribute value']?.toLowerCase() || '';
-        return (
-          sku &&
-          !sku.endsWith('-0') &&
-          attr &&
-          val &&
-          !attr.startsWith('meta_') &&
-          !ignoredAttributes.includes(attr) &&
-          (attr.includes(term) || val.includes(term))
-        );
-      })
-      .map((item) => ({
-        sku: item.SKU,
-        attr: item['Attribute name'],
-        val: item['Attribute value'],
-      }));
-
-    setAttributeMatches(matches);
+      if (
+        sku &&
+        !sku.endsWith('-0') &&
+        attr &&
+        val &&
+        !attr.startsWith('meta_') &&
+        !IGNORED_ATTRIBUTES.includes(attr) &&
+        (attr.toLowerCase().includes(term) || val.toLowerCase().includes(term))
+      ) {
+        if (!grouped[sku]) {
+          grouped[sku] = {
+            sku: sku,
+            attributes: [],
+          };
+        }
+        grouped[sku].attributes.push({ attr, val });
+      }
+    });
+    setAttributeFiltered(Object.values(grouped));
   }, [attributeSearchTerm, data]);
 
   return (
-    <div className="dashboard-container">
-      <h1 className="dashboard-title">JTL Product Dashboard</h1>
+    <div className="container">
+      <h1 className="title">JTL Product Dashboard</h1>
 
-      {/* Main Search */}
       <input
         type="text"
         placeholder="Search by SKU or Item Name..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        className="dashboard-search"
+        className="search-input"
       />
 
       {filteredItems.map((item, idx) => (
-        <div key={idx} className="dashboard-sku-block">
-          <p><strong>SKU:</strong> {item.sku}</p>
+        <div key={idx} className="product-block">
+          <p><strong className="highlight-sku">SKU:</strong> {item.sku}</p>
           <p><strong>Name:</strong> {item.name}</p>
-          <table className="dashboard-table">
+          <table className="attribute-table">
             <thead>
               <tr>
                 <th>Attribute</th>
@@ -149,30 +144,34 @@ export default function Dashboard() {
         </div>
       ))}
 
-      {/* Attribute Search */}
-      <h2 className="dashboard-subtitle">Search by Attribute</h2>
-      <input
-        type="text"
-        placeholder="Search in Attribute Name or Value..."
-        value={attributeSearchTerm}
-        onChange={(e) => setAttributeSearchTerm(e.target.value)}
-        className="dashboard-search"
-      />
+      <div className="attribute-search">
+        <h2>Search by Attribute</h2>
+        <input
+          type="text"
+          placeholder="e.g. color, zipper, foam, etc..."
+          value={attributeSearchTerm}
+          onChange={(e) => setAttributeSearchTerm(e.target.value)}
+          className="search-input green-border"
+        />
 
-      {attributeMatches.length > 0 && (
-        <div className="dashboard-attribute-results">
-          <h3>{attributeMatches.length} result(s) found:</h3>
-          <ul>
-            {attributeMatches.map((match, index) => (
-              <li key={index}>
-                <strong>SKU:</strong> {match.sku} <br />
-                <strong>Attribute:</strong> {match.attr} <br />
-                <strong>Value:</strong> {match.val}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+        {attributeFiltered.length > 0 && (
+          <p><strong>{attributeFiltered.length} result(s) found:</strong></p>
+        )}
+
+        <ul>
+          {attributeFiltered.map((item, idx) => (
+            <li key={idx}>
+              <p><strong className="highlight-sku">SKU:</strong> {item.sku}</p>
+              {item.attributes.map((attr, i) => (
+                <div key={i} style={{ marginLeft: '1rem' }}>
+                  <p><strong>Attribute:</strong> {attr.attr}</p>
+                  <p><strong>Value:</strong> {attr.val}</p>
+                </div>
+              ))}
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

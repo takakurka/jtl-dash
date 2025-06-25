@@ -8,7 +8,6 @@ export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [groupedItems, setGroupedItems] = useState({});
 
-  // Proper UTF-8 CSV loading
   useEffect(() => {
     fetch(CSV_URL)
       .then((response) => response.arrayBuffer())
@@ -20,7 +19,6 @@ export default function Dashboard() {
       });
   }, []);
 
-  // Search and group items by SKU
   useEffect(() => {
     if (!searchTerm) {
       setGroupedItems({});
@@ -50,7 +48,13 @@ export default function Dashboard() {
       if (
         !attrName ||
         attrName.startsWith('meta_') ||
-        ['tags', 'template_suffix', 'barcode_type'].includes(attrName)
+        [
+          'tags',
+          'template_suffix',
+          'barcode_type',
+          'active',
+          'product_type',
+        ].includes(attrName)
       ) {
         continue;
       }

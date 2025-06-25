@@ -32,6 +32,12 @@ export default function Dashboard() {
         item['Item name']?.toLowerCase().includes(term)
     );
 
+    const valueKey = data.length > 0
+      ? Object.keys(data[0]).find(k =>
+          k.toLowerCase().includes('wert') || k.toLowerCase() === 'value'
+        ) || 'Value'
+      : 'Value';
+
     const grouped = {};
     filtered.forEach((item) => {
       const sku = item.SKU;
@@ -44,7 +50,7 @@ export default function Dashboard() {
       }
 
       const attrName = item['Attribute name']?.trim();
-      const value = item['Wert'] || item['Value'] || item['Wert '] || ''; // fallback
+      const value = item[valueKey] || '';
 
       const shouldIgnore =
         !attrName ||
@@ -65,16 +71,14 @@ export default function Dashboard() {
 
   return (
     <div style={{ padding: '3rem' }}>
-      <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem' }}>
-        JTL Product Dashboard
-      </h1>
+      <h1>JTL Product Dashboard</h1>
       <input
         type="text"
-        placeholder="Search by SKU or product name..."
+        placeholder="Search by SKU or item name..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         style={{
-          fontSize: '1.2rem',
+          fontSize: '1.5rem',
           padding: '0.5rem 1rem',
           width: '100%',
           maxWidth: '600px',
@@ -82,32 +86,32 @@ export default function Dashboard() {
         }}
       />
 
-      {groupedItems.length === 0 && searchTerm ? (
-        <p>No product found for: <strong>{searchTerm}</strong></p>
-      ) : (
+      {groupedItems.length > 0 ? (
         groupedItems.map((item) => (
-          <div key={item.sku} style={{ marginBottom: '2rem', borderTop: '1px solid #ccc', paddingTop: '1rem' }}>
+          <div key={item.sku} style={{ marginBottom: '3rem' }}>
             <p><strong>SKU:</strong> {item.sku}</p>
             <p><strong>Name:</strong> {item.itemName}</p>
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr>
-                  <th style={{ border: '1px solid #000', padding: '0.5rem', textAlign: 'left' }}>Attribute</th>
-                  <th style={{ border: '1px solid #000', padding: '0.5rem', textAlign: 'left' }}>Value</th>
+                  <th style={{ border: '1px solid black', padding: '8px' }}>Attribute</th>
+                  <th style={{ border: '1px solid black', padding: '8px' }}>Value</th>
                 </tr>
               </thead>
               <tbody>
                 {item.attributes.map((attr, index) => (
                   <tr key={index}>
-                    <td style={{ border: '1px solid #000', padding: '0.5rem' }}>{attr.name}</td>
-                    <td style={{ border: '1px solid #000', padding: '0.5rem' }}>{attr.value}</td>
+                    <td style={{ border: '1px solid black', padding: '8px' }}>{attr.name}</td>
+                    <td style={{ border: '1px solid black', padding: '8px' }}>{attr.value}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         ))
-      )}
+      ) : searchTerm ? (
+        <p>No product found matching: <strong>{searchTerm}</strong></p>
+      ) : null}
     </div>
   );
 }

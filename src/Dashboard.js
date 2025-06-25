@@ -1,93 +1,108 @@
-'use client';
-
 import React, { useEffect, useState } from 'react';
 import Papa from 'papaparse';
+
+const CSV_URL = 'https://cdn.jsdelivr.net/gh/takakurka/jtl-dash@main/JTL_dashboard.csv';
 
 export default function Dashboard() {
   const [data, setData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [groupedItems, setGroupedItems] = useState([]);
 
   useEffect(() => {
-    const fetchData = async () => {
-      const response = await fetch('https://github.com/takakurka/jtl-dash/raw/refs/heads/main/JTL_dashboard.csv');
-      const reader = response.body.getReader();
-      const result = await reader.read(); 
-      const decoder = new TextDecoder('utf-8');
-      const csv = decoder.decode(result.value); 
-      const results = Papa.parse(csv, { header: true });
-      setData(results.data);
-    };
-
-    fetchData();
+    Papa.parse(CSV_URL, {
+      download: true,
+      header: true,
+      complete: (result) => {
+        setData(result.data);
+      },
+    });
   }, []);
 
-  // Filtrowanie i grupowanie danych
-  const filteredData = data.filter((row) => {
-    const search = searchTerm.toLowerCase();
-    return (
-      row['SKU']?.toLowerCase().includes(search) ||
-      row['Item name']?.toLowerCase().includes(search)
+  useEffect(() => {
+    if (!searchTerm) {
+      setGroupedItems([]);
+      return;
+    }
+
+    const term = searchTerm.toLowerCase();
+
+    // Filtrowanie pasujących rekordów po SKU lub nazwie
+    const filtered = data.filter(
+      (item) =>
+        item.SKU?.toLowerCase().includes(term) ||
+        item['Item name']?.toLowerCase().includes(term)
     );
-  });
 
-  // Grupowanie po SKU
-  const groupedData = filteredData.reduce((acc, row) => {
-    const sku = row['SKU'];
-    if (!acc[sku]) acc[sku] = { itemName: row['Item name'], rows: [] };
-    acc[sku].rows.push(row);
-    return acc;
-  }, {});
+    // Grupowanie po SKU
+    const grouped = {};
+    filtered.forEach((item) => {
+      const sku = item.SKU;
+      if (!grouped[sku]) {
+        grouped[sku] = {
+          sku,
+          itemName: item['Item name'],
+          attributes: [],
+        };
+      }
 
-  // Ignorowane kolumny
-  const ignoredAttributes = ['tags', 'template_suffix'];
-  const ignoredPrefixes = ['meta_'];
+      const attrName = item['Attribute name']?.trim();
+      const shouldIgnore =
+        !attrName ||
+        attrName.startsWith('meta_') ||
+        attrName === 'tags' ||
+        attrName === 'template_suffix';
+
+      if (!shouldIgnore) {
+        grouped[sku].attributes.push({
+          name: attrName,
+          value: item['Wert'],
+        });
+      }
+    });
+
+    setGroupedItems(Object.values(grouped));
+  }, [searchTerm, data]);
 
   return (
-    <div className="p-10">
-      <h1 className="text-3xl font-bold mb-4">JTL Produkt-Dashboard</h1>
+    <div style={{ padding: '3rem' }}>
+      <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '1rem' }}>JTL Produkt-Dashboard</h1>
       <input
         type="text"
-        placeholder="Szukaj po SKU lub nazwie..."
-        className="p-2 border border-black rounded w-full mb-6 text-black"
+        placeholder="Szukaj po SKU lub nazwie produktu..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
+        style={{
+          fontSize: '1.2rem',
+          padding: '0.5rem 1rem',
+          width: '100%',
+          maxWidth: '600px',
+          marginBottom: '2rem',
+        }}
       />
 
-      {Object.keys(groupedData).length === 0 ? (
-        <p>
-          Nie znaleziono produktu pasującego do: <strong>{searchTerm}</strong>
-        </p>
+      {groupedItems.length === 0 && searchTerm ? (
+        <p>Nie znaleziono produktu pasującego do: <strong>{searchTerm}</strong></p>
       ) : (
-        Object.entries(groupedData).map(([sku, group]) => (
-          <div key={sku} className="mb-10 border-t pt-6">
-            <h2 className="text-xl font-bold mb-2">SKU: {sku}</h2>
-            <p className="text-lg mb-2">Nazwa: <strong>{group.itemName}</strong></p>
-            <div className="overflow-auto">
-              <table className="min-w-full border border-black">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border border-black p-2">Attribute name</th>
-                    <th className="border border-black p-2">Wartość</th>
+        groupedItems.map((item) => (
+          <div key={item.sku} style={{ marginBottom: '2rem', borderTop: '1px solid #ccc', paddingTop: '1rem' }}>
+            <p><strong>SKU:</strong> {item.sku}</p>
+            <p><strong>Nazwa:</strong> {item.itemName}</p>
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '1rem' }}>
+              <thead>
+                <tr>
+                  <th style={{ border: '1px solid #000', padding: '0.5rem', textAlign: 'left' }}>Atrybut</th>
+                  <th style={{ border: '1px solid #000', padding: '0.5rem', textAlign: 'left' }}>Wartość</th>
+                </tr>
+              </thead>
+              <tbody>
+                {item.attributes.map((attr, index) => (
+                  <tr key={index}>
+                    <td style={{ border: '1px solid #000', padding: '0.5rem' }}>{attr.name}</td>
+                    <td style={{ border: '1px solid #000', padding: '0.5rem' }}>{attr.value}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {group.rows
-                    .filter((row) => {
-                      const attr = row['Attribute name'] || '';
-                      return (
-                        !ignoredAttributes.includes(attr) &&
-                        !ignoredPrefixes.some((prefix) => attr.startsWith(prefix))
-                      );
-                    })
-                    .map((row, index) => (
-                      <tr key={index}>
-                        <td className="border border-black p-2">{row['Attribute name']}</td>
-                        <td className="border border-black p-2">{row['Wert']}</td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
         ))
       )}

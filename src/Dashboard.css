@@ -1,101 +1,93 @@
-// Full working Dashboard.js with SKU-grouped attribute search
-import React, { useState } from 'react';
-import './Dashboard.css';
-
-function Dashboard({ data }) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [attributeSearchTerm, setAttributeSearchTerm] = useState('');
-
-  const excludedAttributes = [
-    'meta_title', 'meta_description', 'meta_keywords', 'barcode_type', 'active', 'product_type'
-  ];
-
-  const filteredItems = data.filter((item) => {
-    const search = searchTerm.toLowerCase();
-    const nameMatch = item.name?.toLowerCase().includes(search);
-    const skuMatch = item.sku?.toLowerCase().includes(search);
-    return (nameMatch || skuMatch) && !item.sku.endsWith('-0');
-  });
-
-  const attributeResults = {};
-  data.forEach((item) => {
-    if (item.sku.endsWith('-0')) return;
-    item.attributes?.forEach((attr) => {
-      const key = attr.key?.toLowerCase() || '';
-      const value = attr.value?.toLowerCase() || '';
-      if (
-        (key.includes(attributeSearchTerm.toLowerCase()) ||
-         value.includes(attributeSearchTerm.toLowerCase())) &&
-        !excludedAttributes.includes(attr.key)
-      ) {
-        if (!attributeResults[item.sku]) {
-          attributeResults[item.sku] = [];
-        }
-        attributeResults[item.sku].push(attr);
-      }
-    });
-  });
-
-  return (
-    <div className="dashboard">
-      <h1>JTL Product Dashboard</h1>
-      <input
-        type="text"
-        placeholder="Search by SKU or Item Name..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="search-box"
-      />
-
-      {filteredItems.map((item, index) => (
-        <div key={index} className="product-card">
-          <p><strong className="sku">SKU:</strong> <span className="sku-highlight">{item.sku}</span></p>
-          <p><strong>Name:</strong> {item.name}</p>
-          <table>
-            <thead>
-              <tr>
-                <th>Attribute</th>
-                <th>Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              {item.attributes?.filter(attr => !excludedAttributes.includes(attr.key)).map((attr, idx) => (
-                <tr key={idx}>
-                  <td>{attr.key}</td>
-                  <td>{attr.value}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ))}
-
-      <h3>Search by Attribute</h3>
-      <input
-        type="text"
-        placeholder="Search attributes..."
-        value={attributeSearchTerm}
-        onChange={(e) => setAttributeSearchTerm(e.target.value)}
-        className="search-box"
-      />
-
-      {attributeSearchTerm && (
-        <div className="attribute-results">
-          <p><strong>{Object.keys(attributeResults).length} result(s) found:</strong></p>
-          {Object.entries(attributeResults).map(([sku, attrs], index) => (
-            <div key={index} className="attribute-sku-group">
-              <p><strong className="sku">SKU:</strong> <span className="sku-highlight">{sku}</span></p>
-              <ul>
-                {attrs.map((attr, idx) => (
-                  <li key={idx}><strong>Attribute:</strong> {attr.key}<br /><strong>Value:</strong> {attr.value}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+body {
+  font-family: 'Inter', 'Segoe UI', Tahoma, sans-serif;
+  background-color: #f3f4f6;
+  color: #1f2937;
+  margin: 0;
+  padding: 2rem;
 }
 
-export default Dashboard;
+h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 2rem;
+  color: #111827;
+}
+
+input[type="text"] {
+  font-size: 1rem;
+  padding: 0.6rem 1rem;
+  width: 100%;
+  max-width: 600px;
+  margin-bottom: 2rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background-color: white;
+  transition: box-shadow 0.2s ease;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
+  border-color: #3b82f6;
+}
+
+.result-block {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  margin-bottom: 2.5rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.result-block:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+.sku-highlight {
+  background-color: #dcfce7;
+  color: #166534;
+  font-weight: 600;
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 0.9rem;
+  border-radius: 6px;
+  margin-bottom: 0.5rem;
+}
+
+.result-block p {
+  font-size: 1rem;
+  margin: 0.5rem 0 1rem;
+  color: #374151;
+}
+
+.attribute-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+  font-size: 0.95rem;
+}
+
+.attribute-table th {
+  background-color: #f9fafb;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.attribute-table td {
+  padding: 0.7rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #4b5563;
+  vertical-align: top;
+}
+
+.attribute-table tr:nth-child(even) {
+  background-color: #f9fafb;
+}
+
+.attribute-table tr:hover {
+  background-color: #fffacd;
+}
